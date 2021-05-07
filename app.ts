@@ -15,7 +15,7 @@ var input = fs.readFileSync('./Mario Bros. - Super Mario Bros. Theme.mid');
 // Buffers do that, so do native JS arrays, typed arrays, etc.
 var parsed = parseMidi(input);
 var final: { note: number; length: number; wait: number }[] = [];
-var lengths = [];
+var lengths: number[] = [];
 var temp: { note: number; time: number }[] = [];
 
 for (var message of parsed.tracks[0]) {
