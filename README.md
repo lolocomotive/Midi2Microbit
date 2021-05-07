@@ -23,7 +23,7 @@ npm run build
 ## Runnning (after build)
 
 ```
-npm start
+npm start <input file> <output file> <track number>
 ```
 
-The input file should be called in.mid, the program will take th track 0 and store it as notes in notes.js
+The input is `in.mid`, the program will take th track 0 and store it as notes in `out.js` by default

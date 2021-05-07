@@ -6,9 +6,12 @@ function toHz(note: number): number {
     let a = 440; //frequency of A (coomon value is 440Hz)
     return (a / 32) * 2 ** ((note - 9) / 12);
 }
+var inputFile = process.argv[2] == undefined ? './in.mid' : process.argv[2];
+var outputFile = process.argv[3] == undefined ? './out' : process.argv[3];
+var trackNo = process.argv[4] == undefined ? 0 : parseInt(process.argv[4]);
 
 // Read MIDI file into a buffer
-var input = fs.readFileSync('./Mario Bros. - Super Mario Bros. Theme.mid');
+var input = fs.readFileSync(inputFile);
 
 // Parse it into an intermediate representation
 // This will take any array-like object.  It just needs to support .length, .slice, and the [] indexed element getter.
@@ -18,7 +21,7 @@ var final: { note: number; length: number; wait: number }[] = [];
 var lengths: number[] = [];
 var temp: { note: number; time: number }[] = [];
 
-for (var message of parsed.tracks[0]) {
+for (var message of parsed.tracks[trackNo]) {
     if (message.type === 'noteOn') {
         temp.push({ note: message.noteNumber, time: message.deltaTime });
     } else if (message.type === 'noteOff') {
@@ -55,6 +58,6 @@ for (var i in final) {
         final[parseInt(i) + 1]?.wait > 1 ? 'music.stopAllSounds()\n' : '';
 }
 statements += 'music.stopAllSounds()';
-fs.writeFile('notes.js', statements, (err: Error) => {
+fs.writeFile(outputFile + '.js', statements, (err: Error) => {
     if (err) throw err;
 });
