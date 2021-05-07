@@ -1,0 +1,21 @@
+{
+  "name": "midi2microbit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon -e ts --exec \"npx ts-node ./app.ts\""
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "midi-file": "^1.1.2",
+    "nodemon": "^2.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^15.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
+  }
+}
