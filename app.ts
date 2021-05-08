@@ -28,14 +28,23 @@ try {
 // This will take any array-like object. It just needs to support .length, .slice, and the [] indexed element getter.
 // Buffers do that, so do native JS arrays, typed arrays, etc.
 var parsed = parseMidi(input);
-var final: { note: number; length: number; wait: number }[] = [];
+var final: {
+    note: number;
+    length: number;
+    wait: number;
+    velocity: number;
+}[] = [];
 var lengths: number[] = [];
-var temp: { note: number; time: number }[] = [];
+var temp: { note: number; time: number; velocity: number }[] = [];
 
 try {
     for (var message of parsed.tracks[trackNo]) {
         if (message.type === 'noteOn') {
-            temp.push({ note: message.noteNumber, time: message.deltaTime });
+            temp.push({
+                note: message.noteNumber,
+                time: message.deltaTime,
+                velocity: message.velocity * 2,
+            });
         } else if (message.type === 'noteOff') {
             for (var i in temp) {
                 if (temp[i].note == message.noteNumber) {
@@ -43,6 +52,7 @@ try {
                         note: temp[i].note,
                         length: message.deltaTime,
                         wait: temp[i].time,
+                        velocity: temp[i].velocity,
                     });
                     if (!lengths.includes(message.deltaTime))
                         lengths.push(message.deltaTime);
@@ -61,23 +71,36 @@ final = final.map((note) => {
         note: (note.note = toHz(note.note)),
         length: note.length,
         wait: note.wait,
+        velocity: note.velocity,
     };
 });
-var statements = '';
+var output = 'let track = [';
 for (var i in final) {
-    statements +=
-        final[i].wait > 1 ? 'basic.pause(' + final[i].wait + ')\n' : '';
-    statements +=
-        final[i].length > 1 ? 'music.ringTone(' + final[i].note + ')\n' : '';
-    statements +=
-        final[i].length > 1 ? 'basic.pause(' + final[i].length + ')\n' : '';
-    statements +=
-        final[parseInt(i) + 1]?.wait > 1 ? 'music.stopAllSounds()\n' : '';
+    output += `{note:${final[i].note},length:${final[i].length},wait:${final[i].wait},velocity:${final[i].velocity}},`;
 }
-statements += 'music.stopAllSounds()';
+output += ']\n';
+output +=
+    'for (let i = 0; i < track.length - 1 - 1; i++) {' +
+    'let time = track[i].wait\n' +
+    'let length = track[i].length\n' +
+    'let freq = track[i].note\n' +
+    'let volume = track[i].velocity\n' +
+    'music.setVolume(volume)\n' +
+    'if (time > 1) {\n' +
+    '        basic.pause(time)\n' +
+    '    }\n' +
+    '    if (length > 1) {\n' +
+    '        music.ringTone(freq)\n' +
+    '        basic.pause(length)\n' +
+    '    }\n' +
+    '    if (track[i + 1].wait > 1) {\n' +
+    '        music.stopAllSounds()\n' +
+    '    }\n' +
+    '}';
 try {
-    fs.writeFile(outputFile + '.js', statements, (err: Error) => {
+    fs.writeFile(outputFile + '.js', output, (err: Error) => {
         if (err) throw err;
+        console.log('Fnished conversion!');
     });
 } catch (err) {
     console.error("Couldn't write output file", outputFile);
