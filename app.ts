@@ -3,9 +3,8 @@ import { exit } from 'process';
 var fs = require('fs');
 var parseMidi = require('midi-file').parseMidi;
 
-function toHz(note: number): number {
-    let a = 440; //frequency of A (coomon value is 440Hz)
-    return (a / 32) * 2 ** ((note - 9) / 12);
+function pad(n: string, width: number, z: string = '0') {
+    return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
 var inputFile = process.argv[2] == undefined ? './in.mid' : process.argv[2];
 var outputFile = process.argv[3] == undefined ? './out' : process.argv[3];
@@ -14,6 +13,13 @@ try {
 } catch (err) {
     console.error('Wrong input for track number');
     exit(3);
+}
+try {
+    var speed =
+        process.argv[5] == undefined ? 1 : 1 / parseInt(process.argv[5]);
+} catch (err) {
+    console.error('Wrong input for speed modifier');
+    exit(4);
 }
 // Read MIDI file into a buffer
 try {
@@ -36,13 +42,13 @@ var final: {
 }[] = [];
 var lengths: number[] = [];
 var temp: { note: number; time: number; velocity: number }[] = [];
-
+console.log('HINT: File has', parsed.tracks.length, 'tracks');
 try {
     for (var message of parsed.tracks[trackNo]) {
         if (message.type === 'noteOn') {
             temp.push({
                 note: message.noteNumber,
-                time: message.deltaTime,
+                time: message.deltaTime * speed,
                 velocity: message.velocity * 2,
             });
         } else if (message.type === 'noteOff') {
@@ -50,7 +56,7 @@ try {
                 if (temp[i].note == message.noteNumber) {
                     final.push({
                         note: temp[i].note,
-                        length: message.deltaTime,
+                        length: message.deltaTime * speed,
                         wait: temp[i].time,
                         velocity: temp[i].velocity,
                     });
@@ -66,37 +72,60 @@ try {
     console.error('Possible cause: wrong track number');
     exit(2);
 }
-final = final.map((note) => {
-    return {
-        note: (note.note = toHz(note.note)),
-        length: note.length,
-        wait: note.wait,
-        velocity: note.velocity,
-    };
-});
-var output = 'let track = [';
+
+var melody = '';
 for (var i in final) {
-    output += `{note:${final[i].note},length:${final[i].length},wait:${final[i].wait},velocity:${final[i].velocity}},`;
+    if (final[i].length != 0) {
+        var tmp =
+            Math.round(final[i].note).toString(16) +
+            pad(final[i].length.toString(36), 3) +
+            pad(final[i].wait.toString(36), 3) +
+            final[i].velocity.toString(16);
+        if (tmp.length > 10) {
+            console.log(
+                'Too long note omitted',
+                tmp,
+                'with a length of' + tmp.length
+            );
+        } else {
+            melody += tmp;
+        }
+    }
 }
-output += ']\n';
-output +=
-    'for (let i = 0; i < track.length - 1 - 1; i++) {' +
-    'let time = track[i].wait\n' +
-    'let length = track[i].length\n' +
-    'let freq = track[i].note\n' +
-    'let volume = track[i].velocity\n' +
+var output =
+    'function realPow (a: number, n: number) {\n' +
+    '    return Math.exp((n*Math.log(a)))\n' +
+    '}\n' +
+    'function toHz (note: number) {\n' +
+    '    return 13.75 * realPow(2, (note - 9) / 12)\n' +
+    '}\n' +
+    'function playMelody (melody: string) {\n' +
+    '    let freq,nextTime,length,time,volume,note\n' +
+    'freq = 0.1\n' +
+    '    for (let i = 0; i <= melody.length / 10 - 1; i++) {\n' +
+    '        note = melody.substr(i * 10, 10)\n' +
+    '        freq = toHz(parseInt(note.substr(0,2),16))\n' +
+    '        length = parseInt(note.substr(2, 3), 36);\n' +
+    'time = parseInt(note.substr(5, 3), 36);\n' +
+    'volume = parseInt(note.substr(8, 2), 16);\n' +
+    'nextTime = parseInt(melody.substr((i + 1) * 10, 10).substr(8, 2), 16);\n' +
     'music.setVolume(volume)\n' +
-    'if (time > 1) {\n' +
-    '        basic.pause(time)\n' +
+    '        led.toggle(i / 5 % 5, i % 5)\n' +
+    '        if (time > 1) {\n' +
+    '            basic.pause(time)\n' +
+    '        }\n' +
+    '        if (length > 1) {\n' +
+    '            music.ringTone(freq)\n' +
+    '            basic.pause(length)\n' +
+    '        }\n' +
+    '        if (nextTime > 1) {\n' +
+    '            music.stopAllSounds()\n' +
+    '        }\n' +
     '    }\n' +
-    '    if (length > 1) {\n' +
-    '        music.ringTone(freq)\n' +
-    '        basic.pause(length)\n' +
-    '    }\n' +
-    '    if (track[i + 1].wait > 1) {\n' +
-    '        music.stopAllSounds()\n' +
-    '    }\n' +
-    '}';
+    '    music.stopAllSounds()\n' +
+    '}\n' +
+    `let track = "${melody}"\n` +
+    'playMelody(track)';
 try {
     fs.writeFile(outputFile + '.js', output, (err: Error) => {
         if (err) throw err;
