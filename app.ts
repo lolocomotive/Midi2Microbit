@@ -16,7 +16,7 @@ try {
 }
 try {
     var speed =
-        process.argv[5] == undefined ? 1 : 1 / parseInt(process.argv[5]);
+        process.argv[5] == undefined ? 1 : 1 / parseFloat(process.argv[5]);
 } catch (err) {
     console.error('Wrong input for speed modifier');
     exit(4);
