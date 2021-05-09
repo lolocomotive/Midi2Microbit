@@ -2,6 +2,10 @@
 
 Converts a midi file to a script executable by the microbit
 
+### If you don't want to comile it yourself, go to the [releases](https://github.com/lolocomotive/Midi2Microbit/releases/latest) page
+<br><br><br>
+# If you want to compile it yourself / work on it:
+
 ## Installing
 
 ```
