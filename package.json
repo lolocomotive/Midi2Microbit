@@ -7,7 +7,8 @@
     "dev": "nodemon -e ts --exec \"npx ts-node ./app.ts\"",
     "start": "node app",
     "build": "tsc app.ts",
-    "package": "pkg app.js --out-path dist"
+    "package": "pkg app.js --out-path dist",
+    "clean": "git clean -xdf"
   },
   "author": "",
   "license": "ISC",
